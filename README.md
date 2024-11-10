@@ -25,7 +25,16 @@ A Python application that implements the Relative Rotation Graph (RRG) indicator
 ## Installation
 
 1. Clone the repository
-2. Install dependencies:
+2. Open copied repository in terminal
+3. Create python virtual enviironment (windows setup)
+```bash
+python -m venv env
+```
+```bash
+env/Scripts/activate
+```
+
+4. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
