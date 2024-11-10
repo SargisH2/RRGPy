@@ -48,7 +48,7 @@ def get_color(x, y):
         return 'yellow'
     
 # Retrieve historical prices 
-period = '1y'
+period = 'ytd'
 tickers = ['FOO.PA', 'HLT.PA', 'TNO.PA', 'BNK.PA', 'PABZ.PA', 'AUT.PA']
 tickers_metadata_dict = {
     'symbol': [],
@@ -68,7 +68,7 @@ tickers_data = yf.download(tickers, period=period, interval="1wk")['Adj Close']
 benchmark_data = yf.download(benchmark, period=period, interval="1wk")['Adj Close']
 
 stoxx = yf.download(benchmark, period=period, interval="1wk")['Adj Close']
-window = 14
+window = 7
 
 rs_tickers = []
 rsr_tickers = []
@@ -76,7 +76,7 @@ rsr_roc_tickers = []
 rsm_tickers = []
 
 for i in range(len(tickers)):
-    rs_tickers.append(100 * (tickers_data[tickers[i]]/ benchmark_data))
+    rs_tickers.append(100 * (tickers_data[tickers[i]].tz_localize(None)/ benchmark_data))
     rsr_tickers.append((100 + (rs_tickers[i] - rs_tickers[i].rolling(window=window).mean()) / rs_tickers[i].rolling(window=window).std(ddof=0)).dropna())
     rsr_roc_tickers.append(100 * ((rsr_tickers[i]/ rsr_tickers[i][1]) - 1))
     rsm_tickers.append((101 + ((rsr_roc_tickers[i] - rsr_roc_tickers[i].rolling(window=window).mean()) / rsr_roc_tickers[i].rolling(window=window).std(ddof=0))).dropna())
@@ -148,8 +148,8 @@ def update_slider_end_date(val):
 slider_end_date.on_changed(update_slider_end_date)
 
 # get the real date from the slider value
-start_date = rsr_tickers[0].index[0]
-end_date = rsr_tickers[0].index[slider_end_date.val]
+start_date = rsr_tickers[0].index[0].tz_localize('utc')
+end_date = rsr_tickers[0].index[slider_end_date.val].tz_localize('utc')
 
 #  Add a slider for the tail 
 ax_tail = plt.axes([0.25, 0.05, 0.65, 0.03])
@@ -337,7 +337,11 @@ def animate(i):
             filtered_rsr_tickers = rsr_tickers[j].loc[(rsr_tickers[j].index > start_date) & (rsr_tickers[j].index <= end_date)]
             filtered_rsm_tickers = rsm_tickers[j].loc[(rsm_tickers[j].index > start_date) & (rsm_tickers[j].index <= end_date)]
             # Update the scatter
-            color = get_color(filtered_rsr_tickers.values[-1], filtered_rsm_tickers.values[-1])
+            try:
+                color = get_color(filtered_rsr_tickers.values[-1], filtered_rsm_tickers.values[-1])
+            except:
+                continue
+                continue
             scatter_plots[j] = ax[0].scatter(filtered_rsr_tickers.values, filtered_rsm_tickers.values, color=color, s=marker_size)
             # Update the line
             line_plots[j] = ax[0].plot(filtered_rsr_tickers.values, filtered_rsm_tickers.values, color='black', alpha=0.2)[0]
@@ -345,10 +349,11 @@ def animate(i):
             #line_plots[j].set_data(get_line_points(filtered_rsr_tickers.values, filtered_rsm_tickers.values))
             # Update the annotation
             annotations[j] = ax[0].annotate(tickers[j], (filtered_rsr_tickers.values[-1], filtered_rsm_tickers.values[-1]))
-
+        start_date_utc = start_date.tz_localize('utc')
+        end_date_utc = end_date.tz_localize('utc')
         # Update the price and change 
-        price = round(tickers_data[tickers[j]][end_date], 2)
-        chg = round((price - tickers_data[tickers[j]][start_date]) / tickers_data[tickers[j]][start_date] * 100, 1)
+        price = round(tickers_data[tickers[j]][end_date_utc], 2)
+        chg = round((price - tickers_data[tickers[j]][start_date_utc]) / tickers_data[tickers[j]][start_date_utc] * 100, 1)
         table.grid_slaves(row=j+1, column=2)[0].config(text=price)
         table.grid_slaves(row=j+1, column=3)[0].config(text=chg)
 
